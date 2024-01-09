@@ -1145,3 +1145,290 @@ Lo que aprendimos en esta aula:
 ¿Comenzando en esta etapa? Aquí puedes descargar los archivos del proyecto que hemos avanzado hasta el aula anterior.
 
 [Descargue los archivos en Github](https://github.com/alura-es-cursos/1833-procedures-sql-ejecutando-codigo-en-mysql/tree/aula-5 "Descargue los archivos en Github") o haga clic [aquí](https://github.com/alura-es-cursos/1833-procedures-sql-ejecutando-codigo-en-mysql/archive/refs/heads/aula-5.zip "aquí") para descargarlos directamente.
+
+### Hallando el valor total del crédito
+
+Crea un **Stored Procedure** usando un cursor para hallar el valor total de todos los créditos de todos los clientes. Llamaremos este SP como: `limite_creditos`.
+
+Tips:
+
+Declara dos variables: Una que recibe el límite de crédito del cursor y otra el límite de crédito total; haz un loop en el cursor y ve sumando en la variable límite de crédito total el valor del límite de cada cliente; Exhibe el valor total del límite.
+
+```SQL
+DELIMITER $$
+CREATE PROCEDURE `limite_creditos`()
+BEGIN
+DECLARE limite_credito FLOAT;
+DECLARE limite_credito_acumulado FLOAT;
+DECLARE fin_cursor INT;
+DECLARE c CURSOR FOR SELECT LIMITE_DE_CREDITO FROM tabla_de_clientes;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET fin_cursor = 1;
+SET fin_cursor = 0;
+SET limite_credito_acumulado = 0;
+SET limite_credito = 0;
+OPEN c;
+WHILE fin_cursor = 0
+DO
+FETCH c INTO limite_credito;
+IF fin_cursor = 0 
+THEN SET limite_credito_acumulado = limite_credito_acumulado + limite_credito;
+END IF;
+END WHILE;
+SELECT limite_credito_acumulado;
+CLOSE c;
+END $$
+```
+
+### Calculando el valor total de la facturación
+
+Crea un **Stored Procedure** usando un cursor para hallar el valor total de la facturación para un determinado mes y año.
+
+Tips:
+
+Declara tres variables: Una que recibe la cantidad, otra el precio y otra que va a acumular la facturación; Haz un loop en el cursor e ve sumando el valor de facturación en cada factura; Exhibe el valor total del límite; Recuerda que la consulta quiere obtener la facturación de un mes y año. El comando a continuación muestra todas las facturas generadas en enero de 2017:
+
+```SQL
+SELECT IFa.CANTIDAD, IFa.PRECIO FROM items_facturas IFa
+INNER JOIN facturas  F ON F.NUMERO = IFa.NUMERO
+WHERE MONTH(F.FECHA_VENTA) = 1 AND YEAR(F.FECHA_VENTA) = 2017;
+```
+
+Llamaremos este **Stored Procedure** como: `campo_adicional`.
+
+```SQL
+DELIMITER $$
+CREATE PROCEDURE `campo_adicional`()
+BEGIN
+DECLARE cantidad INT;
+DECLARE precio FLOAT;
+DECLARE facturacion_acumulada FLOAT;
+DECLARE fin_cursor INT;
+DECLARE c CURSOR FOR
+SELECT IFa.CANTIDAD, IFa.PRECIO FROM items_facturas IFa
+INNER JOIN facturas  F ON F.NUMERO = IFa.NUMERO
+WHERE MONTH(F.FECHA_VENTA) = 1 AND YEAR(F.FECHA_VENTA) = 2017;
+DECLARE CONTINUE HANDLER FOR NOT FOUND 
+SET fin_cursor = 1;
+OPEN c;
+SET fin_cursor = 0;
+SET facturacion_acumulada = 0;
+WHILE fin_cursor = 0
+DO
+FETCH c INTO cantidad, precio;
+IF fin_cursor = 0 THEN
+SET facturacion_acumulada = facturacion_acumulada + (cantidad * precio);
+END IF;
+END WHILE;
+CLOSE c;
+SELECT facturacion_acumulada;
+END $$
+```
+
+### Obteniendo el número de facturas
+
+Veja a Stored Procedure abaixo:
+
+```SQL
+DELIMITER $$
+CREATE PROCEDURE `sp_numero_facturas` ()
+BEGIN
+DECLARE n_facturas INT;
+SELECT COUNT(*) INTO n_facturas FROM facturas WHERE FECHA_VENTA = '20170101';
+SELECT n_facturas;
+END $$
+```
+
+Transforma este SP en una función donde ingresamos como parámetro la fecha y retornamos el número de facturas. Llamaremos esta función f_numero_facturas. Luego de crear la función, ejecútalo utilizando el comando SELECT.
+
+```SQL
+DELIMITER $$
+CREATE FUNCTION `f_numero_facturas`(fecha DATE) 
+RETURNS INTEGER
+BEGIN
+DECLARE n_facturas INT;
+SELECT COUNT(*) INTO n_facturas FROM facturas WHERE FECHA_VENTA = fecha;
+RETURN n_facturas;
+END $$
+
+SELECT f_numero_facturas() AS RESULTADO;
+```
+
+### Haga lo que hicimos en aula
+
+Llegó la hora de que sigas todos los pasos realizados por mí durante esta clase. Si ya lo has hecho ¡Excelente! Si todavía no lo has hecho, es importante que ejecutes lo que fue visto en los vídeos para que puedas continuar con la próxima aula.
+
+1. Cuando el resultado de un SELECT posee más de una línea no podemos atribuirlo a una variable usando el SELECT INTO. Para ello, tenemos que usar una estructura llamada Cursor para recibir los valores provenientes de una tabla, con una o más columnas.
+
+2. Vamos a crear un SP que utilice un Cursor. Digita y ejecuta:
+
+```SQL
+DELIMITER $$
+CREATE PROCEDURE `cursor_1`()
+BEGIN
+DECLARE vnombre VARCHAR(50);
+DECLARE c CURSOR FOR SELECT NOMBRE FROM tabla_de_clientes LIMIT 4;
+OPEN c;
+FETCH c INTO vnombre;
+SELECT vnombre;
+FETCH c INTO vnombre;
+SELECT vnombre;
+FETCH c INTO vnombre;
+SELECT vnombre;
+FETCH c INTO vnombre;
+SELECT vnombre;
+FETCH c INTO vnombre;
+SELECT vnombre;
+CLOSE c;
+END$$
+DELIMITER ;
+```
+
+3. Nota que cada línea de la selección es atribuida a la variable vnombre, una línea a la vez. Ejecuta:
+
+```SQL
+CALL cursor_1;
+```
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/28.png)
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/29.png)
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/30.png)
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/31.png)
+
+4. En el anterior SP ejecutamos un Cursor controlado donde sabíamos cuántos elementos el mismo contenía. Pero, normalmente, no sabemos esta información. Por ello usamos siempre el Cursor combinado con un Looping. Digita y ejecuta la creación del siguiente SP:
+
+```SQL
+DELIMITER $$
+CREATE PROCEDURE `cursor_looping`()
+BEGIN
+DECLARE fin_c INT DEFAULT 0;
+DECLARE vnombre VARCHAR(50);
+DECLARE c CURSOR FOR SELECT NOMBRE FROM tabla_de_clientes;
+DECLARE CONTINUE HANDLER FOR NOT FOUND
+SET fin_c = 1;
+OPEN c;
+WHILE fin_c = 0
+DO
+FETCH c INTO vnombre;
+IF fin_c = 0 
+THEN SELECT vnombre;
+END IF;
+END WHILE;
+CLOSE c;
+END$$
+DELIMITER ;
+```
+
+5. Ejecuta el SP:
+
+```SQL
+CALL cursor_looping;
+```
+
+Obtendremos diversos resultados en diferentes consultas.
+
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/32.png)
+
+6. El Cursor puede recibir más de un campo. Crea el siguiente SP:
+
+```SQL
+DELIMITER $$
+CREATE PROCEDURE `cursor_looping_varios_campos`()
+BEGIN
+DECLARE fin_c INT DEFAULT 0;
+DECLARE vbarrio, vciudad, vestado, vcp VARCHAR(50);
+DECLARE vnombre, vdireccion VARCHAR(150);
+DECLARE c CURSOR FOR SELECT NOMBRE, DIRECCION_1, BARRIO, CIUDAD, ESTADO, CP FROM tabla_de_clientes;
+DECLARE CONTINUE HANDLER FOR NOT FOUND
+SET fin_c = 1;
+OPEN c;
+WHILE fin_c = 0
+DO
+FETCH c INTO vnombre, vdireccion, vbarrio, vciudad, vestado, vcp;
+IF fin_c = 0 
+THEN SELECT CONCAT(vnombre, ' Dirección: ', vdireccion, " - ", vbarrio, ' - ', vciudad, ' - ', vestado, ' - ',vcp) AS RESULTADO;
+END IF;
+END WHILE;
+CLOSE c;
+END$$
+DELIMITER ;
+```
+
+7. Ejecútalo:
+
+```SQL
+CALL cursor_looping_varios_campos;
+```
+
+Este SP también devuelve múltiples consultas.
+
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/33.png)
+
+8. También, podemos crear una función. La diferencia entre una función y un SP es que la función retorna un valor y puede ser usado dentro de un comando SELECT, INSERT, UPDATE y condiciones de DELETE.
+
+9. Para crear una función con el botón derecho del mouse, haz clic sobre **Function** y selecciona** Create Function**:
+
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/34.png)
+
+10. Digita y ejecuta el siguiente código:
+
+```SQL
+DELIMITER $$
+CREATE FUNCTION `f_define_sabor`(vsabor VARCHAR(40)) RETURNS varchar(40) CHARSET utf8mb4
+BEGIN
+DECLARE vretorno VARCHAR(40) DEFAULT "";
+CASE vsabor
+WHEN 'Maracuyá' THEN SET vretorno = 'Muy Rico';
+WHEN 'Limón' THEN SET vretorno = 'Muy Rico';
+WHEN 'Frutilla' THEN SET vretorno = 'Muy Rico';
+WHEN 'Uva' THEN SET vretorno = 'Muy Rico';
+WHEN 'Sandía' THEN SET vretorno = 'Normal';
+WHEN 'Mango' THEN SET vretorno = 'Normal';
+ELSE SET vretorno = 'Jugos comunes';
+END CASE;
+RETURN vretorno;
+END$$
+DELIMITER ;
+```
+
+11. Si te aparece el siguiente error:
+
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/35.png)
+
+12. Es porque MySQL no permite la construcción de Funciones por defecto. Para permitir la creación de funciones, ejecuta el siguiente comando:
+
+```SQL
+SET GLOBAL log_bin_trust_function_creators = 1;
+```
+
+Y nuevamente crea la función.
+
+13. Ejecuta la función:
+
+```SQL
+SELECT f_define_sabor('Maracuyá');
+```
+
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/36.png)
+
+14. Podemos usar la función en un comando SELECT (Al igual que con cualquier otra función de MySQL). Digita y ejecuta:
+
+```SQL
+SELECT NOMBRE_DEL_PRODUCTO, SABOR, f_define_sabor(SABOR) AS TIPO
+FROM tabla_de_productos;
+```
+
+![](https://caelum-online-public.s3.amazonaws.com/1833-esp-procedures-sql/05/37.png)
+
+### Proyecto final
+
+Aquí puedes descargar los archivos del proyecto completo.
+
+[Descargue los archivos en Github](https://github.com/alura-es-cursos/1833-procedures-sql-ejecutando-codigo-en-mysql/tree/proyecto-final "Descargue los archivos en Github") o haga clic [aquí](https://github.com/alura-es-cursos/1833-procedures-sql-ejecutando-codigo-en-mysql/archive/refs/heads/proyecto-final.zip "aquí") para descargarlos directamente.
+
+### Lo que aprendimos
+
+Lo que aprendimos en esta aula:
+
+- A conocer la estructura de CURSOR que permite atribuir valores resultantes de un `SELECT` con múltiples líneas;
+- Vimos que podemos atribuir al CURSOR más de una columna;
+- A usar el CURSOR en conjunto con un ciclo de lazo (**Loop**);
+- Cómo crear y utilizar una función.
